@@ -48,15 +48,45 @@ def main(src_url: str):
     """Получение данных из динамических элементов"""
     positions = ['Website', 'Community', 'Chat']
 
-    driver = webdriver.Chrome(
-        executable_path='chromedriver/chromedriver.exe'
-    )
+    # driver = webdriver.Chrome(
+    #     executable_path='chromedriver/chromedriver.exe'
+    # )
+    #
+    # driver.get(src_url)
+    # actions = ActionChains(driver)
+    # driver.minimize_window()
+    #
+    # page_source = driver.page_source
+    #
+    # with open(f'data/page_source.html', 'w', encoding='utf-8') as file:
+    #     file.write(page_source)
 
-    driver.get(src_url)
-    actions = ActionChains(driver)
-    driver.minimize_window()
+    with open(f'data/page_source.html', 'r', encoding='utf-8') as file:
+        html = file.read()
 
-    elements = driver.find_elements(By.CSS_SELECTOR, '.geHuRS')
+    bs = BeautifulSoup(html, 'lxml')
+
+    content_links = bs.find_all(class_='geHuRS')
+
+    data = {}
+    for content in content_links:
+        section_name = content.find('div', class_='fqJtFe').find('h6', class_='modalHeading').text
+        print(section_name)
+
+        if section_name in ('Links', 'Community'):
+            print('ok')
+
+    # elements = driver.find_elements(By.CSS_SELECTOR, '.geHuRS')
+    #
+    # data = {}
+    # for element in elements:
+    #     if element.find_element(By.CLASS_NAME, 'modalHeading').text != 'Explorers':
+    #         modal_elements = element.find_elements(By.CLASS_NAME, 'modalLink')
+    #
+    #         for link in modal_elements:
+    #             print(link.get_attribute('href'))
+    #
+    #         time.sleep(2)
 
     # elements = driver.find_elements(By.CSS_SELECTOR, '.link-button')
 
@@ -78,7 +108,7 @@ def main(src_url: str):
     #             print(tooltip_elements)  
                 
                 # tooltip_data = {}
-                
+
                 # for item in tooltip_elements:
                 #     print(item.text)
                     # if item.text:
@@ -94,7 +124,7 @@ def main(src_url: str):
             
         # time.sleep(2)
 
-    driver.close()
+    # driver.close()
 
     # return data
 
