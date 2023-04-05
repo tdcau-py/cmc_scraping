@@ -42,20 +42,36 @@ def get_links_to_item_source(domen: str) -> list:
     return links_to_src
 
 
-def get_sites_data(src_url: str, tippy_attr: str):
+def main(url_coin_list: str):
     """Получение данных из скрытых элементов"""
+    data = {}
     driver = webdriver.Chrome(
         executable_path='chromedriver/chromedriver.exe'
     )
 
-    driver.get(src_url)
-
+    driver.get(url_coin_list)
     actions = ActionChains(driver)
-    element = driver.find_element(By.ID, tippy_attr)
-    actions.move_to_element(element).perform()
-    tooltip_elements = driver.find_elements(By.CLASS_NAME, 'dropdownItem')
 
-    return tooltip_elements
+    title = driver.find_element(By.CLASS_NAME, 'h1').text
+    data['title'] = title
+
+    print(data)
+
+    elements = driver.find_elements(By.CSS_SELECTOR, '.link-button')
+
+    sites = []
+    for element in elements:
+        actions.move_to_element(element).perform()
+
+        if driver.find_element(By.ID, 'tippy-1'):
+            sites_element = driver.find_element(By.ID, 'tippy-1').find_elements(By.CLASS_NAME, 'dropdownItem')
+
+            for site in sites_element:
+                sites.append(site.get_attribute('href'))
+
+    data['sites'] = sites
+
+    print(data)
 
 
 if __name__ == '__main__':
@@ -70,11 +86,18 @@ if __name__ == '__main__':
 
         links_to_coins = get_links_to_item_source(cmc_domen)
 
-        sites = get_sites_data(links_to_coins[1], '#tippy-1')
-        sites_urls = [site.get_attribute('href') for site in sites if site.get_attribute('href')]
+        main(links_to_coins[1])
 
-        communities = get_sites_data(links_to_coins[1], 'tippy-8')
-
-        for community in communities:
-            if community.text == 'twitter':
-                print(community.text)
+        # sites_urls = []
+        #
+        # for item in tippy_1_block:
+        #     sites = item.find_elements(By.CLASS_NAME, 'dropdownItem')
+        #
+        #     sites_urls = [site.get_attribute('href') for site in sites if site.get_attribute('href')]
+        #
+        # print(sites_urls)
+        # communities = get_sites_data(links_to_coins[1], 'tippy-8')
+        #
+        # for community in communities:
+        #     if community.text == 'twitter':
+        #         print(community.text)
