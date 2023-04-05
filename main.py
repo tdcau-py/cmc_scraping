@@ -1,10 +1,12 @@
 import json
+import time
 
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.action_chains import ActionChains
 import requests
+from selenium import webdriver
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
+
 import csv
 
 
@@ -42,36 +44,59 @@ def get_links_to_item_source(domen: str) -> list:
     return links_to_src
 
 
-def main(url_coin_list: str):
-    """Получение данных из скрытых элементов"""
-    data = {}
+def main(src_url: str):
+    """Получение данных из динамических элементов"""
+    positions = ['Website', 'Community', 'Chat']
+
     driver = webdriver.Chrome(
         executable_path='chromedriver/chromedriver.exe'
     )
 
-    driver.get(url_coin_list)
+    driver.get(src_url)
     actions = ActionChains(driver)
+    driver.minimize_window()
 
-    title = driver.find_element(By.CLASS_NAME, 'h1').text
-    data['title'] = title
+    elements = driver.find_elements(By.CSS_SELECTOR, '.geHuRS')
 
-    print(data)
+    # elements = driver.find_elements(By.CSS_SELECTOR, '.link-button')
 
-    elements = driver.find_elements(By.CSS_SELECTOR, '.link-button')
+    # data = {}
+    # for element in elements:
+    #     element_tag = element.tag_name
+    #     title = element.find_element(By.CSS_SELECTOR, '.buttonName').text
+        
+    #     if element_tag == 'a':
+    #         if title not in ('Source code', 'Whitepaper', ''):
+    #             tooltip_element = element.get_attribute('href')
+    #             data[title] = tooltip_element
 
-    sites = []
-    for element in elements:
-        actions.move_to_element(element).perform()
+    #     elif element_tag == 'button':
+    #         if title in positions:
+    #             actions.move_to_element(element).perform()
+    #             tooltip_elements = element.find_element(By.CSS_SELECTOR, '.dropdownItem')
 
-        if driver.find_element(By.ID, 'tippy-1'):
-            sites_element = driver.find_element(By.ID, 'tippy-1').find_elements(By.CLASS_NAME, 'dropdownItem')
+    #             print(tooltip_elements)  
+                
+                # tooltip_data = {}
+                
+                # for item in tooltip_elements:
+                #     print(item.text)
+                    # if item.text:
+                    #     actions.move_to_element(item).perform()
+                    #     print(item.text)
+                    #     print(item.get_attribute('href'))
+                        # link_name = item.text
+                        # tooltip_data[link_name] = item.get_attribute('href')
 
-            for site in sites_element:
-                sites.append(site.get_attribute('href'))
+                    # time.sleep(2)
 
-    data['sites'] = sites
+                # data[title] = tooltip_data
+            
+        # time.sleep(2)
 
-    print(data)
+    driver.close()
+
+    # return data
 
 
 if __name__ == '__main__':
@@ -87,17 +112,3 @@ if __name__ == '__main__':
         links_to_coins = get_links_to_item_source(cmc_domen)
 
         main(links_to_coins[1])
-
-        # sites_urls = []
-        #
-        # for item in tippy_1_block:
-        #     sites = item.find_elements(By.CLASS_NAME, 'dropdownItem')
-        #
-        #     sites_urls = [site.get_attribute('href') for site in sites if site.get_attribute('href')]
-        #
-        # print(sites_urls)
-        # communities = get_sites_data(links_to_coins[1], 'tippy-8')
-        #
-        # for community in communities:
-        #     if community.text == 'twitter':
-        #         print(community.text)
