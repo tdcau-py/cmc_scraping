@@ -57,24 +57,26 @@ def get_sites_data(src_url: str):
     actions = ActionChains(driver)
     driver.minimize_window()
 
-    elements = driver.find_elements(By.CSS_SELECTOR, '.link-button')
+    elements = driver.find_elements(By.CSS_SELECTOR, '.geHuRS')
 
-    data = {}
-    for element in elements:
-        element_tag = element.tag_name
-        title = element.find_element(By.CSS_SELECTOR, '.buttonName').text
+    # elements = driver.find_elements(By.CSS_SELECTOR, '.link-button')
+
+    # data = {}
+    # for element in elements:
+    #     element_tag = element.tag_name
+    #     title = element.find_element(By.CSS_SELECTOR, '.buttonName').text
         
-        if element_tag == 'a':
-            if title not in ('Source code', 'Whitepaper', ''):
-                tooltip_element = element.get_attribute('href')
-                data[title] = tooltip_element
+    #     if element_tag == 'a':
+    #         if title not in ('Source code', 'Whitepaper', ''):
+    #             tooltip_element = element.get_attribute('href')
+    #             data[title] = tooltip_element
 
-        elif element_tag == 'button':
-            if title in positions:
-                actions.move_to_element(element).perform()
-                tooltip_elements = element.find_element(By.CSS_SELECTOR, '.dropdownItem')
+    #     elif element_tag == 'button':
+    #         if title in positions:
+    #             actions.move_to_element(element).perform()
+    #             tooltip_elements = element.find_element(By.CSS_SELECTOR, '.dropdownItem')
 
-                print(tooltip_elements)  
+    #             print(tooltip_elements)  
                 
                 # tooltip_data = {}
                 
