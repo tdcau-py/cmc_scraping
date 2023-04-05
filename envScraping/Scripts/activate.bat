@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=F:\programming\python\freelance\cmc_parse\envScraping
+set VIRTUAL_ENV=E:\programms\job_projects\project\cmc_scraping\envScraping
 
 if not defined PROMPT set PROMPT=$P$G
 
