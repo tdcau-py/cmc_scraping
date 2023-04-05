@@ -11,111 +11,73 @@ from selenium.webdriver.common.by import By
 import csv
 
 
-class ParseHtml:
-    def __init__(self, url: str):
-        self.url = url
-
-    @property
-    def header(self):
-        return {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 YaBrowser/23.3.1.806 Yowser/2.5 Safari/537.36'
-        }
-
-    def get_html(self):
-        """Возвращает html-страницу"""
-        req = requests.get(self.url, headers=self.header)
-        
-        if req.text:
-            return req.text
-
-        return False
+def header():
+    return {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 YaBrowser/23.3.1.806 Yowser/2.5 Safari/537.36'
+    }
 
 
-class Sensors:
-    def __init__(self, url):
-        self.url = url
+def get_html(url: str):
+    """Возвращает html-страницу"""
+    headers = header()
+    req = requests.get(url, headers=headers)
 
-    @property
-    def header(self):
-        return {
-            'Referer': 'https://s2.coinmarketcap.com/',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 YaBrowser/23.3.1.806 Yowser/2.5 Safari/537.36'
-        }
+    if req.text:
+        return req.text
 
-    def get_data(self):
-        req = requests.post(self.url, headers=self.header)
+    return False
 
-        if req.text:
-            return req.text
 
-        return False
-    
+def get_links_to_item_source(domen: str) -> list:
+    """Собирает ссылки на все ресурсы"""
+    links_to_src = []
 
-def get_dynamic_data(url):
-    chrome_options = Options()
-    chrome_options.add_argument('--headless')
+    with open('index.html', 'r', encoding='utf-8') as file:
+        html_cmc = file.read()
 
+    bs = BeautifulSoup(html_cmc, 'lxml')
+    table_trs = bs.find(class_='cmc-table').find('tbody').find_all('tr')
+
+    for tr in table_trs:
+        url_link = domen + tr.find(class_='cmc-link')['href']
+        links_to_src.append(url_link)
+
+    return links_to_src
+
+
+def get_sites_data(src_url: str, tippy_attr: str):
+    """Получение данных из скрытых элементов"""
     driver = webdriver.Chrome(
-        executable_path='chromedriver/chromedriver',
-        options=chrome_options,
+        executable_path='chromedriver/chromedriver.exe'
     )
 
-    driver.get(url=url)
-    time.sleep(3)
+    driver.get(src_url)
 
-    print(driver.find_element(By.CLASS_NAME, 'dropdownItem').text)
+    actions = ActionChains(driver)
+    element = driver.find_element(By.ID, tippy_attr)
+    actions.move_to_element(element).perform()
+    tooltip_elements = driver.find_elements(By.CLASS_NAME, 'dropdownItem')
 
-    return driver.close()
+    return tooltip_elements
 
 
 if __name__ == '__main__':
     cmc_domen = 'https://coinmarketcap.com'
     cmc_url = 'https://coinmarketcap.com/?page=1'
 
-    cmc_main = ParseHtml(cmc_url)
-    html_code = cmc_main.get_html()
+    html_doc = get_html(cmc_url)
 
-    if html_code:
+    if html_doc:
         # with open('index.html', 'w', encoding='utf-8') as file:
-        #     file.write(html_code)
+        #     file.write(html_doc)
 
-        with open('index.html', 'r', encoding='utf-8') as file:
-            html_cmc = file.read()
+        links_to_coins = get_links_to_item_source(cmc_domen)
 
-        # Сбор ссылок на ресурсы
-        bs = BeautifulSoup(html_cmc, 'lxml')
-        cmc_table_tr = bs.find(class_='cmc-table').find('tbody').find_all('tr')
+        sites = get_sites_data(links_to_coins[1], '#tippy-1')
+        sites_urls = [site.get_attribute('href') for site in sites if site.get_attribute('href')]
 
-        links_to_src = []
+        communities = get_sites_data(links_to_coins[1], 'tippy-8')
 
-        for tr in cmc_table_tr:
-            link = tr.find('a', class_='cmc-link')
-            url_link = cmc_domen + link['href']
-            links_to_src.append(url_link)
-
-        count = 0
-
-        for link in links_to_src:
-            if count == 2:
-                break
-            else:
-                src_page = ParseHtml(link)
-                html_src = src_page.get_html()
-
-                # with open(f'data/{count}_link.html', 'w', encoding='utf-8') as file:
-                #     file.write(html_src)
-
-                bs_link = BeautifulSoup(html_src, 'lxml')
-                
-                src_name_header = bs_link.find(class_='nameSection').find(class_='nameHeader')
-
-                src_title = src_name_header.find(class_='sc-1d5226ca-0').text
-
-                # src_links_section = bs_link.find(class_='linksSection').find(class_='content').find_all('li')
-
-                get_dynamic_data(link)
-
-                
-
-
-            count += 1
+        for community in communities:
+            if community.text == 'twitter':
+                print(community.text)
