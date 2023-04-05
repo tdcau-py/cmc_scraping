@@ -45,20 +45,58 @@ def get_links_to_item_source(domen: str) -> list:
     return links_to_src
 
 
-def get_sites_data(src_url: str, tippy_attr: str):
-    """Получение данных из скрытых элементов"""
+def get_sites_data(src_url: str):
+    """Получение данных из динамических элементов"""
+    positions = ['Website', 'Community', 'Chat']
+
     driver = webdriver.Chrome(
         executable_path='chromedriver/chromedriver.exe'
     )
 
     driver.get(src_url)
-
     actions = ActionChains(driver)
-    element = driver.find_element(By.ID, tippy_attr)
-    actions.move_to_element(element).perform()
-    tooltip_elements = driver.find_elements(By.CLASS_NAME, 'dropdownItem')
+    driver.minimize_window()
 
-    return tooltip_elements
+    elements = driver.find_elements(By.CSS_SELECTOR, '.link-button')
+
+    data = {}
+    for element in elements:
+        element_tag = element.tag_name
+        title = element.find_element(By.CSS_SELECTOR, '.buttonName').text
+        
+        if element_tag == 'a':
+            if title not in ('Source code', 'Whitepaper', ''):
+                tooltip_element = element.get_attribute('href')
+                data[title] = tooltip_element
+
+        elif element_tag == 'button':
+            if title in positions:
+                actions.move_to_element(element).perform()
+                tooltip_elements = element.find_element(By.CSS_SELECTOR, '.dropdownItem')
+
+                print(tooltip_elements)  
+                
+                # tooltip_data = {}
+                
+
+                # for item in tooltip_elements:
+                #     print(item.text)
+                    # if item.text:
+                    #     actions.move_to_element(item).perform()
+                    #     print(item.text)
+                    #     print(item.get_attribute('href'))
+                        # link_name = item.text
+                        # tooltip_data[link_name] = item.get_attribute('href')
+
+                    # time.sleep(2)
+
+                # data[title] = tooltip_data
+            
+        # time.sleep(2)
+
+    driver.close()
+
+    # return data
 
 
 if __name__ == '__main__':
@@ -73,11 +111,6 @@ if __name__ == '__main__':
 
         links_to_coins = get_links_to_item_source(cmc_domen)
 
-        sites = get_sites_data(links_to_coins[1], '#tippy-1')
-        sites_urls = [site.get_attribute('href') for site in sites if site.get_attribute('href')]
-
-        communities = get_sites_data(links_to_coins[1], 'tippy-8')
-
-        for community in communities:
-            if community.text == 'twitter':
-                print(community.text)
+        sites = get_sites_data(links_to_coins[1])
+        print(sites)
+        # sites_urls = [site.get_attribute('href') for site in sites if site.get_attribute('href')]
