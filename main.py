@@ -1,11 +1,8 @@
-import json
-import time
+import os
 
 from bs4 import BeautifulSoup
 import requests
 from selenium import webdriver
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.by import By
 
 import csv
 
@@ -44,96 +41,108 @@ def get_links_to_item_source(domen: str) -> list:
     return links_to_src
 
 
+def writing_data_to_csv(title: str, data: dict):
+    """Записывает полученные данные в CSV файл"""
+    dir_result = os.path.join(os.getcwd(), 'result')
+    csv_file_name = 'cmc_data.csv'
+    path_to_csv_file = os.path.join(dir_result, csv_file_name)
+
+    titles = ['Title', 'Websites', 'Socials', 'Chat']
+    websites = '\n'.join(data['Sites'])
+    socials = '\n'.join(data['Community'])
+    chat = '\n'.join(data['Chat'])
+
+    if not os.path.exists(dir_result):
+        os.system(f'mkdir {dir_result}')
+
+    if not os.path.exists(path_to_csv_file):
+        with open(path_to_csv_file, 'w', encoding='utf-8', newline='') as csv_file:
+            csvwriter = csv.DictWriter(csv_file, fieldnames=titles, dialect='excel')
+            csvwriter.writeheader()
+
+            csvwriter.writerow({
+                'Title': title, 
+                'Websites': websites,
+                'Socials': socials, 
+                'Chat': chat,
+                })
+
+    else:
+        with open(path_to_csv_file, 'a', encoding='utf-8', newline='') as csv_file:
+            csvwriter = csv.DictWriter(csv_file, fieldnames=titles, dialect='excel')
+            csvwriter.writerow({
+                'Title': title, 
+                'Websites': websites,
+                'Socials': socials, 
+                'Chat': chat,
+                })
+
+
+
 def main(src_url: str):
-    """Получение данных из динамических элементов"""
-    positions = ['Website', 'Community', 'Chat']
+    """Получение данных"""
+    src_name = src_url.split('/')[-2]
 
-    # driver = webdriver.Chrome(
-    #     executable_path='chromedriver/chromedriver.exe'
-    # )
-    #
-    # driver.get(src_url)
-    # actions = ActionChains(driver)
-    # driver.minimize_window()
-    #
-    # page_source = driver.page_source
-    #
-    # with open(f'data/page_source.html', 'w', encoding='utf-8') as file:
-    #     file.write(page_source)
+    driver = webdriver.Chrome(
+        executable_path='chromedriver/chromedriver.exe'
+    )
+    
+    driver.get(src_url)
+    driver.minimize_window()
+    page_source = driver.page_source
+    
+    with open(f'data/page_{src_name}.html', 'w', encoding='utf-8') as file:
+        file.write(page_source)
 
-    with open(f'data/page_source.html', 'r', encoding='utf-8') as file:
+    with open(f'data/page_{src_name}.html', 'r', encoding='utf-8') as file:
         html = file.read()
 
     bs = BeautifulSoup(html, 'lxml')
-
-    content_links = bs.find_all(class_='geHuRS')
-
+    title = bs.find(class_='fLa-dNu').text
+    content_links = bs.find(class_='jfPVkR').find(class_='jfPVkR').find_all(class_='geHuRS')
+    
+    sites = []
+    chats = []
+    communities = []
     data = {}
+
     for content in content_links:
-        section_name = content.find('div', class_='fqJtFe').find('h6', class_='modalHeading').text
-        print(section_name)
+        section_name = content.find('h6').text
 
-        if section_name in ('Links', 'Community'):
-            print('ok')
+        if section_name == 'Links':
+            links = content.find_all('a')
 
-    # elements = driver.find_elements(By.CSS_SELECTOR, '.geHuRS')
-    #
-    # data = {}
-    # for element in elements:
-    #     if element.find_element(By.CLASS_NAME, 'modalHeading').text != 'Explorers':
-    #         modal_elements = element.find_elements(By.CLASS_NAME, 'modalLink')
-    #
-    #         for link in modal_elements:
-    #             print(link.get_attribute('href'))
-    #
-    #         time.sleep(2)
+            for link in links:
+                if link.text.strip() not in ('Whitepaper', 'Source code'):
+                    if link.text.strip() == 'Chat':
+                        if link['href'].startswith('https://t.me') or link['href'].startswith('https://discord.gg'):
+                            chats.append(link['href'])
 
-    # elements = driver.find_elements(By.CSS_SELECTOR, '.link-button')
+                    else:
+                        sites.append(link['href'])
 
-    # data = {}
-    # for element in elements:
-    #     element_tag = element.tag_name
-    #     title = element.find_element(By.CSS_SELECTOR, '.buttonName').text
-        
-    #     if element_tag == 'a':
-    #         if title not in ('Source code', 'Whitepaper', ''):
-    #             tooltip_element = element.get_attribute('href')
-    #             data[title] = tooltip_element
-
-    #     elif element_tag == 'button':
-    #         if title in positions:
-    #             actions.move_to_element(element).perform()
-    #             tooltip_elements = element.find_element(By.CSS_SELECTOR, '.dropdownItem')
-
-    #             print(tooltip_elements)  
-                
-                # tooltip_data = {}
-
-                # for item in tooltip_elements:
-                #     print(item.text)
-                    # if item.text:
-                    #     actions.move_to_element(item).perform()
-                    #     print(item.text)
-                    #     print(item.get_attribute('href'))
-                        # link_name = item.text
-                        # tooltip_data[link_name] = item.get_attribute('href')
-
-                    # time.sleep(2)
-
-                # data[title] = tooltip_data
+        elif section_name == 'Community':
             
-        # time.sleep(2)
+            links = content.find_all('a')
 
-    # driver.close()
+            for link in links:
+                if link.text.strip() == 'Twitter' or link.text.strip() == 'Reddit':
+                    communities.append(link['href'])
+            
+    data['Sites'] = sites
+    data['Community'] = communities
+    data['Chat'] = chats
 
-    # return data
+    writing_data_to_csv(title, data)
+    
+    return data
 
 
 if __name__ == '__main__':
     cmc_domen = 'https://coinmarketcap.com'
-    cmc_url = 'https://coinmarketcap.com/?page=1'
+    cmc_page_url = 'https://coinmarketcap.com/?page=1'
 
-    html_doc = get_html(cmc_url)
+    html_doc = get_html(cmc_page_url)
 
     if html_doc:
         # with open('index.html', 'w', encoding='utf-8') as file:
@@ -141,4 +150,5 @@ if __name__ == '__main__':
 
         links_to_coins = get_links_to_item_source(cmc_domen)
 
-        main(links_to_coins[1])
+        for link in links_to_coins:
+            main(link)
