@@ -54,11 +54,14 @@ def writing_data_to_csv(title: str, data: dict):
 
     if not os.path.exists(dir_result):
         os.system(f'mkdir {dir_result}')
+        print('Создана папка "result"...')
 
     if not os.path.exists(path_to_csv_file):
         with open(path_to_csv_file, 'w', encoding='utf-8', newline='') as csv_file:
             csvwriter = csv.DictWriter(csv_file, fieldnames=titles, dialect='excel')
             csvwriter.writeheader()
+
+            print(f'Создан файл {csv_file_name}...')
 
             csvwriter.writerow({
                 'Title': title, 
@@ -66,6 +69,8 @@ def writing_data_to_csv(title: str, data: dict):
                 'Socials': socials, 
                 'Chat': chat,
                 })
+
+
 
     else:
         with open(path_to_csv_file, 'a', encoding='utf-8', newline='') as csv_file:
@@ -77,6 +82,7 @@ def writing_data_to_csv(title: str, data: dict):
                 'Chat': chat,
                 })
 
+    print('Данные записаны... Переход к следующему ресурсу...\n')
 
 
 def main(src_url: str):
@@ -90,15 +96,24 @@ def main(src_url: str):
     driver.get(src_url)
     driver.minimize_window()
     page_source = driver.page_source
+
+    if not os.path.exists(os.path.join(os.getcwd(), 'data')):
+        os.system('mkdir data')
+        print('Создана папка "data".\n')
     
     with open(f'data/page_{src_name}.html', 'w', encoding='utf-8') as file:
         file.write(page_source)
+
+    print('Выгружен html-код страницы ресурса...')
 
     with open(f'data/page_{src_name}.html', 'r', encoding='utf-8') as file:
         html = file.read()
 
     bs = BeautifulSoup(html, 'lxml')
     title = bs.find(class_='fLa-dNu').text
+
+    print(f'Обработка страницы {title}')
+
     content_links = bs.find(class_='jfPVkR').find(class_='jfPVkR').find_all(class_='geHuRS')
     
     sites = []
@@ -139,16 +154,29 @@ def main(src_url: str):
 
 
 if __name__ == '__main__':
-    cmc_domen = 'https://coinmarketcap.com'
-    cmc_page_url = 'https://coinmarketcap.com/?page=1'
+    cmc_domen = 'https://coinmarketcap.com/'
 
-    html_doc = get_html(cmc_page_url)
+    for num_page in range(1, 92):
+        cmc_page_url = f'{cmc_domen}?page={num_page}'
 
-    if html_doc:
-        # with open('index.html', 'w', encoding='utf-8') as file:
-        #     file.write(html_doc)
+        print('Начало парсинга...')
 
-        links_to_coins = get_links_to_item_source(cmc_domen)
+        html_doc = get_html(cmc_page_url)
 
-        for link in links_to_coins:
-            main(link)
+        if html_doc:
+            # with open('index.html', 'w', encoding='utf-8') as file:
+            #     file.write(html_doc)
+
+            # print('\nСоздан файл с html-кодом главной страницы.')
+
+            links_to_coins = get_links_to_item_source(cmc_domen)
+
+            for link in links_to_coins:
+                print(f'\nПарсинг ресурса по ссылке {link}...\n')
+
+                if link.split('/')[-2] == 'vechain':
+                    continue
+
+                main(link)
+
+    print('\nПарсинг завершен.')
