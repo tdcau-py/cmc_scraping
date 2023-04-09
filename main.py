@@ -1,15 +1,15 @@
 import os
+import csv
+import requests
 
 from bs4 import BeautifulSoup
-import requests
 from selenium import webdriver
-
-import csv
+from selenium.webdriver.chrome.options import Options
 
 
 def header():
     return {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 YaBrowser/23.3.1.806 Yowser/2.5 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:107.0) Gecko/20100101 Firefox/107.0'
     }
 
 
@@ -24,14 +24,14 @@ def get_html(url: str):
     return False
 
 
-def get_links_to_item_source(domen: str) -> list:
+def get_links_to_item_source(domen: str, index_html: str) -> list:
     """Собирает ссылки на все ресурсы"""
     links_to_src = []
 
-    with open('index.html', 'r', encoding='utf-8') as file:
-        html_cmc = file.read()
+    # with open(f'data/index.html', 'r', encoding='utf-8') as file:
+    #     html_cmc = file.read()
 
-    bs = BeautifulSoup(html_cmc, 'lxml')
+    bs = BeautifulSoup(index_html, 'lxml')
     table_trs = bs.find(class_='cmc-table').find('tbody').find_all('tr')
 
     for tr in table_trs:
@@ -41,13 +41,13 @@ def get_links_to_item_source(domen: str) -> list:
     return links_to_src
 
 
-def writing_data_to_csv(title: str, data: dict):
+def writing_data_to_csv(num_data: int, title: str, data: dict):
     """Записывает полученные данные в CSV файл"""
     dir_result = os.path.join(os.getcwd(), 'result')
     csv_file_name = 'cmc_data.csv'
     path_to_csv_file = os.path.join(dir_result, csv_file_name)
 
-    titles = ['Title', 'Websites', 'Socials', 'Chat']
+    titles = ['№', 'Title', 'Websites', 'Socials', 'Chat']
     websites = '\n'.join(data['Sites'])
     socials = '\n'.join(data['Community'])
     chat = '\n'.join(data['Chat'])
@@ -64,18 +64,18 @@ def writing_data_to_csv(title: str, data: dict):
             print(f'Создан файл {csv_file_name}...')
 
             csvwriter.writerow({
+                '№': num_data,
                 'Title': title, 
                 'Websites': websites,
                 'Socials': socials, 
                 'Chat': chat,
                 })
 
-
-
     else:
         with open(path_to_csv_file, 'a', encoding='utf-8', newline='') as csv_file:
             csvwriter = csv.DictWriter(csv_file, fieldnames=titles, dialect='excel')
             csvwriter.writerow({
+                '№': num_data,
                 'Title': title, 
                 'Websites': websites,
                 'Socials': socials, 
@@ -85,26 +85,25 @@ def writing_data_to_csv(title: str, data: dict):
     print('Данные записаны... Переход к следующему ресурсу...\n')
 
 
-def main(src_url: str):
+def main(src_url: str, count_operation: int):
     """Получение данных"""
     src_name = src_url.split('/')[-2]
 
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')
     driver = webdriver.Chrome(
-        executable_path='chromedriver/chromedriver.exe'
+        executable_path='chromedriver/chromedriver.exe',
+        options=chrome_options,
     )
     
     driver.get(src_url)
     driver.minimize_window()
     page_source = driver.page_source
-
-    if not os.path.exists(os.path.join(os.getcwd(), 'data')):
-        os.system('mkdir data')
-        print('Создана папка "data".\n')
     
     with open(f'data/page_{src_name}.html', 'w', encoding='utf-8') as file:
         file.write(page_source)
 
-    print('Выгружен html-код страницы ресурса...')
+    print(f'Выгружен html-код страницы ресурса {count_operation}...')
 
     with open(f'data/page_{src_name}.html', 'r', encoding='utf-8') as file:
         html = file.read()
@@ -148,35 +147,47 @@ def main(src_url: str):
     data['Community'] = communities
     data['Chat'] = chats
 
-    writing_data_to_csv(title, data)
+    writing_data_to_csv(count_operation, title, data)
     
     return data
 
 
 if __name__ == '__main__':
-    cmc_domen = 'https://coinmarketcap.com/'
+    cmc_domen = 'https://coinmarketcap.com'
+    print('Начало парсинга...')
+
+    count = 0
 
     for num_page in range(1, 92):
-        cmc_page_url = f'{cmc_domen}?page={num_page}'
+        cmc_page_url = f'{cmc_domen}/?page={num_page}'
 
-        print('Начало парсинга...')
+        print(f'\nСтраница {num_page}.')
 
-        html_doc = get_html(cmc_page_url)
+        html_code = get_html(cmc_page_url)
 
-        if html_doc:
-            # with open('index.html', 'w', encoding='utf-8') as file:
-            #     file.write(html_doc)
+        if html_code:
+            if not os.path.exists(os.path.join(os.getcwd(), 'data')):
+                os.system('mkdir data')
+                print('Создана папка "data".\n')
 
-            # print('\nСоздан файл с html-кодом главной страницы.')
+            with open(f'data/index_{num_page}.html', 'w', encoding='utf-8') as file:
+                file.write(html_code)
 
-            links_to_coins = get_links_to_item_source(cmc_domen)
+            print('Создан файл с html-кодом главной страницы.')
+
+            with open(f'data/index_{num_page}.html', 'r', encoding='utf-8') as file:
+                main_html = file.read()
+
+            links_to_coins = get_links_to_item_source(cmc_domen, main_html)
 
             for link in links_to_coins:
-                print(f'\nПарсинг ресурса по ссылке {link}...\n')
+                count += 1
+
+                print(f'Парсинг ресурса по ссылке {link}...\n')
 
                 if link.split('/')[-2] == 'vechain':
                     continue
 
-                main(link)
+                main(link, count)
 
     print('\nПарсинг завершен.')
